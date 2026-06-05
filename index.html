@@ -124,7 +124,6 @@ html,body{height:100%;font-family:'Malgun Gothic','맑은 고딕',sans-serif;fon
 /* ── Config notice ── */
 .config-notice{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:12px;margin:10px 12px 0;font-size:12px;color:var(--warning);line-height:1.7;}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 </head>
 <body>
 <div id="app">
@@ -267,12 +266,24 @@ html,body{height:100%;font-family:'Malgun Gothic','맑은 고딕',sans-serif;fon
             <div class="field"><label>점검종별</label>
               <select id="f-type"><option>월간</option><option>주간</option><option>일간</option><option>특별</option></select>
             </div>
-            <div class="field"><label>수전전압 (KV)</label><input id="f-voltage" placeholder="22.9"></div>
-          </div>
-          <div class="grid2">
             <div class="field"><label>업체명</label><input id="f-company"></div>
-            <div class="field"><label>수전용량 (KW)</label><input type="number" id="f-pwrcv"></div>
           </div>
+
+          <div class="grid2">
+            <div>
+              <div class="field"><label>수전전압 (KV)</label><input id="f-voltage" placeholder="22.9"></div>
+              <div class="field"><label>수전전압 (V)</label><input id="f-voltage-v" placeholder="22900"></div>
+            </div>
+            <div>
+              <div style="font-size:12px;color:var(--text3);margin-bottom:6px;font-weight:600;">용량 (KW)</div>
+              <div class="field"><label>수 전</label><input type="number" id="f-pwrcv" placeholder="970"></div>
+              <div class="field"><label>발 전</label><input type="number" id="f-pwgen" placeholder=""></div>
+              <div class="field"><label>태양광</label><input type="number" id="f-pwsolar" placeholder=""></div>
+              <div class="field"><label>기타설비</label><input type="number" id="f-pwetc" placeholder=""></div>
+              <div class="field"><label>연료전지</label><input type="number" id="f-pwfuel" placeholder=""></div>
+            </div>
+          </div>
+
           <div class="grid2">
             <div class="field"><label>점검사</label><input id="f-inspector"></div>
             <div class="field"><label>안전관리자</label><input id="f-manager"></div>
@@ -290,17 +301,47 @@ html,body{height:100%;font-family:'Malgun Gothic','맑은 고딕',sans-serif;fon
         </div>
 
         <div class="card">
-          <div class="card-title">운전상황 — 측정개소</div>
-          <div class="grid2">
-            <div class="field"><label>측정개소</label><input id="m1-loc"></div>
-            <div class="field"><label>정격전류</label><input id="m1-rated"></div>
+          <div class="card-title">운전상황</div>
+
+          <!-- 측정개소 1 -->
+          <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px;">측정개소 1</div>
+          <div class="grid2" style="margin-bottom:6px;">
+            <div class="field"><label>측정개소</label><input id="m1-loc" placeholder="예: 수전실"></div>
+            <div class="field"><label>정격전류</label><input id="m1-rated" placeholder="예: 950kW"></div>
           </div>
-          <div style="display:grid;grid-template-columns:24px 1fr 1fr;gap:6px;margin-bottom:6px;">
+          <div style="display:grid;grid-template-columns:24px 1fr 1fr;gap:6px;margin-bottom:4px;">
             <div></div>
             <div style="font-size:11px;color:var(--text3);text-align:center;">전압(V)</div>
             <div style="font-size:11px;color:var(--text3);text-align:center;">전류(A)</div>
           </div>
           <div id="meas-rows"></div>
+
+          <div style="border-top:1px solid var(--border);margin:10px 0;"></div>
+
+          <!-- 측정개소 2 -->
+          <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px;">측정개소 2</div>
+          <div class="grid2" style="margin-bottom:6px;">
+            <div class="field"><label>측정개소</label><input id="m2-loc" placeholder=""></div>
+            <div class="field"><label>정격전류</label><input id="m2-rated" placeholder=""></div>
+          </div>
+          <div style="display:grid;grid-template-columns:24px 1fr 1fr;gap:6px;margin-bottom:4px;">
+            <div></div>
+            <div style="font-size:11px;color:var(--text3);text-align:center;">전압(V)</div>
+            <div style="font-size:11px;color:var(--text3);text-align:center;">전류(A)</div>
+          </div>
+          <div id="meas-rows2"></div>
+
+          <div style="border-top:1px solid var(--border);margin:10px 0;"></div>
+
+          <!-- 발전설비 -->
+          <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px;">발전설비</div>
+          <div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:6px;margin-bottom:4px;">
+            <div></div>
+            <div style="font-size:11px;color:var(--text3);text-align:center;">전압(V)</div>
+            <div style="font-size:11px;color:var(--text3);text-align:center;">전류(A)</div>
+            <div style="font-size:11px;color:var(--text3);text-align:center;">발전량(KWH)</div>
+          </div>
+          <div id="gen-rows"></div>
         </div>
 
         <div class="card">
@@ -767,7 +808,7 @@ function initNewForm() {
   currentEditId = null;
   checkState = {};
   buildChecks();
-  buildMeasRows();
+  buildMeasRows(); 
   document.querySelectorAll('#page-form input,#page-form select,#page-form textarea').forEach(el=>{
     if(el.tagName==='SELECT') el.selectedIndex=0; else el.value='';
   });
@@ -801,14 +842,17 @@ async function openRecord(id) {
   const rec = res.record;
 
   buildChecks(rec.checks);
-  buildMeasRows(rec.meas1);
+  buildMeasRows(rec.meas1, rec.meas2);
 
   const sv = (eid,val)=>{ const el=document.getElementById(eid); if(el) el.value=val||''; };
-  sv('f-date',rec.date); sv('f-count',rec.count); sv('f-voltage',rec.voltage);
-  sv('f-company',rec.company); sv('f-pwrcv',rec.pwRcv);
+  sv('f-date',rec.date); sv('f-count',rec.count); sv('f-voltage',rec.voltage); sv('f-voltage-v',rec.voltageV);
+  sv('f-company',rec.company); sv('f-pwrcv',rec.pwRcv); sv('f-pwgen',rec.pwGen); sv('f-pwsolar',rec.pwSolar); sv('f-pwetc',rec.pwEtc); sv('f-pwfuel',rec.pwFuel);
   sv('f-inspector',rec.inspector); sv('f-manager',rec.manager);
   sv('f-memo',rec.memo||''); sv('f-edu',rec.edu);
   sv('m1-loc',rec.meas1?.loc); sv('m1-rated',rec.meas1?.rated);
+  sv('m2-loc',rec.meas2?.loc); sv('m2-rated',rec.meas2?.rated);
+  // 발전설비 복원
+  if (rec.genData) rec.genData.forEach((g,i)=>{ const n=i+1; ['kw','v','a','kwh'].forEach(f=>{ const el=document.getElementById('gen'+n+'-'+f); if(el) el.value=g[f]||''; }); });
   document.getElementById('f-type').value = rec.type||'월간';
 
   const st = rec.status||'draft';
@@ -884,11 +928,11 @@ async function openRecord(id) {
 }
 
 function setFormReadOnly(ro) {
-  ['f-date','f-count','f-voltage','f-company','f-pwrcv','f-inspector','f-manager','f-type','f-memo','f-edu','m1-loc','m1-rated'].forEach(id=>{
+  ['f-date','f-count','f-voltage','f-voltage-v','f-company','f-pwrcv','f-pwgen','f-pwsolar','f-pwetc','f-pwfuel','f-inspector','f-manager','f-type','f-memo','f-edu','m1-loc','m1-rated'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.disabled=ro;
   });
   document.querySelectorAll('.chk').forEach(b=>b.disabled=ro);
-  document.querySelectorAll('#meas-rows input').forEach(b=>b.disabled=ro);
+  document.querySelectorAll('#meas-rows input, #meas-rows2 input, #gen-rows input').forEach(b=>b.disabled=ro);
 }
 
 function renderFormActions(status, rec) {
@@ -918,63 +962,88 @@ function renderFormActions(status, rec) {
 }
 
 // ══════════════════════════════════════════
-//  SIGNATURE PAD (signature_pad 라이브러리)
+//  SIGNATURE PAD (순수 Canvas)
 // ══════════════════════════════════════════
 const signPads = {};
 
 function initSignPad(prefix) {
   const cvs = document.getElementById(prefix + '-cvs');
   if (!cvs) return;
-  if (signPads[prefix] && signPads[prefix].sp) return;
+  if (signPads[prefix] && signPads[prefix].ready) return;
 
-  // canvas 실제 픽셀 크기 설정
-  const dpr = window.devicePixelRatio || 1;
-  const W   = cvs.offsetWidth  || cvs.parentElement?.offsetWidth  || 300;
-  const H   = cvs.offsetHeight || 150;
-  cvs.width  = W * dpr;
-  cvs.height = H * dpr;
-  const ctx = cvs.getContext('2d');
-  ctx.scale(dpr, dpr);
-
+  const W = cvs.offsetWidth || cvs.parentElement?.offsetWidth || 300;
+  const H = 150;
   if (!W) { setTimeout(() => initSignPad(prefix), 300); return; }
 
-  try {
-    const sp = new SignaturePad(cvs, {
-      minWidth: 1,
-      maxWidth: 3,
-      penColor: '#111827',
-      backgroundColor: 'rgba(255,255,255,0)',
-    });
+  const dpr = window.devicePixelRatio || 1;
+  cvs.width  = W * dpr;
+  cvs.height = H * dpr;
 
-    sp.addEventListener('beginStroke', () => {
-      const ph = document.getElementById(prefix + '-sign-ph');
-      if (ph) ph.style.display = 'none';
-      const sv = document.getElementById(prefix + '-sign-saved');
-      if (sv) sv.style.display = 'inline';
-      signPads[prefix].hasDrawn = true;
-    });
+  const ctx = cvs.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#111827';
+  ctx.lineWidth   = 2.5;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
 
-    signPads[prefix] = { sp, cvs, hasDrawn: false };
-  } catch(e) {
-    console.error('SignaturePad init error:', e);
+  let drawing = false, lx = 0, ly = 0;
+
+  function getXY(e) {
+    const r   = cvs.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - r.left, y: src.clientY - r.top };
   }
+  function down(e) {
+    e.preventDefault();
+    drawing = true;
+    const p = getXY(e); lx = p.x; ly = p.y;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 1, 0, Math.PI*2);
+    ctx.fillStyle = '#111827'; ctx.fill();
+    const ph = document.getElementById(prefix+'-sign-ph');
+    if (ph) ph.style.display = 'none';
+    const sv = document.getElementById(prefix+'-sign-saved');
+    if (sv) sv.style.display = 'inline';
+    signPads[prefix].hasDrawn = true;
+  }
+  function move(e) {
+    e.preventDefault();
+    if (!drawing) return;
+    const p = getXY(e);
+    ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(p.x, p.y); ctx.stroke();
+    lx = p.x; ly = p.y;
+  }
+  function up() { drawing = false; }
+
+  cvs.addEventListener('mousedown',  down, false);
+  cvs.addEventListener('mousemove',  move, false);
+  cvs.addEventListener('mouseup',    up,   false);
+  cvs.addEventListener('mouseleave', up,   false);
+  cvs.addEventListener('touchstart', down, { passive: false });
+  cvs.addEventListener('touchmove',  move, { passive: false });
+  cvs.addEventListener('touchend',   up,   false);
+
+  signPads[prefix] = { cvs, ctx, hasDrawn: false, ready: true };
 }
 function clearSign(prefix) {
   const pad = signPads[prefix];
-  if (pad && pad.sp) {
-    pad.sp.clear();
+  if (pad && pad.ctx && pad.cvs) {
+    const dpr = window.devicePixelRatio || 1;
+    pad.ctx.clearRect(0, 0, pad.cvs.width/dpr, pad.cvs.height/dpr);
     pad.hasDrawn = false;
+    pad.ready = false;
   }
-  const ph = document.getElementById(prefix + '-sign-ph');
+  signPads[prefix] = null;
+  const ph = document.getElementById(prefix+'-sign-ph');
   if (ph) ph.style.display = 'flex';
-  const sv = document.getElementById(prefix + '-sign-saved');
+  const sv = document.getElementById(prefix+'-sign-saved');
   if (sv) sv.style.display = 'none';
+  setTimeout(() => initSignPad(prefix), 100);
 }
 
 function getSignDataUrl(prefix) {
   const pad = signPads[prefix];
-  if (!pad || !pad.hasDrawn || !pad.sp || pad.sp.isEmpty()) return '';
-  try { return pad.sp.toDataURL('image/png'); } catch(e) { return ''; }
+  if (!pad || !pad.hasDrawn || !pad.cvs) return '';
+  try { return pad.cvs.toDataURL('image/png'); } catch(e) { return ''; }
 }
 
 function getSignDataUrlAsync(prefix) {
@@ -985,14 +1054,19 @@ function loadSignFromUrl(prefix, dataUrl) {
   if (!dataUrl) return;
   function tryLoad() {
     const pad = signPads[prefix];
-    if (!pad || !pad.sp) { setTimeout(tryLoad, 300); return; }
-    pad.sp.fromDataURL(dataUrl).then(() => {
+    if (!pad || !pad.cvs) { setTimeout(tryLoad, 300); return; }
+    const img = new Image();
+    img.onload = () => {
+      const dpr = window.devicePixelRatio || 1;
+      pad.ctx.clearRect(0, 0, pad.cvs.width/dpr, pad.cvs.height/dpr);
+      pad.ctx.drawImage(img, 0, 0, pad.cvs.width/dpr, pad.cvs.height/dpr);
       pad.hasDrawn = true;
-      const ph = document.getElementById(prefix + '-sign-ph');
+      const ph = document.getElementById(prefix+'-sign-ph');
       if (ph) ph.style.display = 'none';
-      const sv = document.getElementById(prefix + '-sign-saved');
+      const sv = document.getElementById(prefix+'-sign-saved');
       if (sv) sv.style.display = 'inline';
-    });
+    };
+    img.src = dataUrl;
   }
   tryLoad();
 }
@@ -1022,14 +1096,21 @@ async function handleSave(newStatus) {
     count: document.getElementById('f-count').value,
     type: document.getElementById('f-type').value,
     voltage: document.getElementById('f-voltage').value,
+    voltageV: document.getElementById('f-voltage-v').value,
     company: document.getElementById('f-company').value,
-    pwRcv: document.getElementById('f-pwrcv').value,
+    pwRcv:   document.getElementById('f-pwrcv').value,
+    pwGen:   document.getElementById('f-pwgen').value,
+    pwSolar: document.getElementById('f-pwsolar').value,
+    pwEtc:   document.getElementById('f-pwetc').value,
+    pwFuel:  document.getElementById('f-pwfuel').value,
     inspector: document.getElementById('f-inspector').value,
     manager: document.getElementById('f-manager').value,
     memo: document.getElementById('f-memo').value,
     edu: document.getElementById('f-edu').value,
     checks: JSON.parse(JSON.stringify(checkState)),
     meas1: collectMeas(),
+    meas2: collectMeas2(),
+    genData: collectGen(),
     managerComment: document.getElementById('f-mgr-comment').value || existing?.managerComment || '',
     approverComment: document.getElementById('f-apr-comment').value || existing?.approverComment || '',
     companySign: (newStatus==='submitted' || newStatus==='draft') ? ((await getSignDataUrlAsync('cmp')) || existing?.companySign || '') : (existing?.companySign || ''),
@@ -1127,7 +1208,6 @@ td{padding:2px 4px;border:1px solid #ccc;font-size:8.5px;}
   html,body{height:auto;}
 }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 </head><body>
 <button class="print-btn" onclick="window.print()">🖨️ 인쇄</button>
 <div class="wrap">
@@ -1138,19 +1218,34 @@ td{padding:2px 4px;border:1px solid #ccc;font-size:8.5px;}
 <div class="sec">기본 정보</div>
 <table>
   <tr><th style="width:55px;">업체명</th><td colspan="3">${g('f-company')}</td><th style="width:55px;">점검종별</th><td>${g('f-type')}</td></tr>
-  <tr><th>점검 날짜</th><td>${g('f-date')}</td><th>점검횟수</th><td>${g('f-count')}회</td><th>수전전압</th><td>${g('f-voltage')} KV</td></tr>
-  <tr><th>수전용량</th><td>${g('f-pwrcv')} KW</td><th>점검사</th><td>${g('f-inspector')}</td><th>안전관리자</th><td>${g('f-manager')}</td></tr>
+  <tr><th>점검 날짜</th><td>${g('f-date')}</td><th>점검횟수</th><td>${g('f-count')}회</td><th>점검사</th><td>${g('f-inspector')}</td></tr>
+  <tr><th rowspan="2">수전전압</th><td>${g('f-voltage')} KV</td><th rowspan="5">용량(KW)</th><th>수 전</th><td>${g('f-pwrcv')} KW</td></tr>
+  <tr><td>${g('f-voltage-v')} V</td><th>발 전</th><td>${g('f-pwgen')} KW</td></tr>
+  <tr><th>안전관리자</th><td>${g('f-manager')}</td><th>태양광</th><td>${g('f-pwsolar')} KW</td></tr>
+  <tr><td colspan="2"></td><th>기타설비</th><td>${g('f-pwetc')} KW</td></tr>
+  <tr><td colspan="2"></td><th>연료전지</th><td>${g('f-pwfuel')} KW</td></tr>
 </table>
 
 <div class="main-grid">
   <div class="left-col">
-    <div class="sec">운전상황 — 측정개소</div>
+    <div class="sec">운전상황 — 측정</div>
     <table>
-      <tr><th>측정개소</th><td>${g('m1-loc')}</td><th>정격전류</th><td>${g('m1-rated')}</td></tr>
+      <tr><th rowspan="5" style="width:55px;">측정개소<br><small>${g('m1-loc')}</small><br>정격전류<br><small>${g('m1-rated')}</small></th>
+        <th style="width:20px;">R</th><th>전압(V)</th><td>${document.getElementById('m1r-v')?.value||''}</td><th>전류(A)</th><td>${document.getElementById('m1r-a')?.value||''}</td>
+        <th rowspan="5" style="width:55px;">측정개소<br><small>${g('m2-loc')}</small><br>정격전류<br><small>${g('m2-rated')}</small></th>
+        <th style="width:20px;">R</th><th>전압(V)</th><td>${document.getElementById('m2r-v')?.value||''}</td><th>전류(A)</th><td>${document.getElementById('m2r-a')?.value||''}</td>
+      </tr>
+      <tr><th>S</th><td>${document.getElementById('m1s-v')?.value||''}</td><th></th><td>${document.getElementById('m1s-a')?.value||''}</td>
+          <th>S</th><td>${document.getElementById('m2s-v')?.value||''}</td><th></th><td>${document.getElementById('m2s-a')?.value||''}</td></tr>
+      <tr><th>T</th><td>${document.getElementById('m1t-v')?.value||''}</td><th></th><td>${document.getElementById('m1t-a')?.value||''}</td>
+          <th>T</th><td>${document.getElementById('m2t-v')?.value||''}</td><th></th><td>${document.getElementById('m2t-a')?.value||''}</td></tr>
+      <tr><th>N</th><td>${document.getElementById('m1n-v')?.value||''}</td><th></th><td>${document.getElementById('m1n-a')?.value||''}</td>
+          <th>N</th><td>${document.getElementById('m2n-v')?.value||''}</td><th></th><td>${document.getElementById('m2n-a')?.value||''}</td></tr>
     </table>
+    <div class="sec">발전설비</div>
     <table>
-      <tr><th>상</th><th>전압(V)</th><th>전류(A)</th></tr>
-      ${measRows}
+      <tr><th>용량(KW)</th><th>전압(V)</th><th>전류(A)</th><th>발전량(KWH)</th></tr>
+      ${[1,2,3].map(n=>`<tr><td>${document.getElementById('gen'+n+'-kw')?.value||''} KW</td><td>${document.getElementById('gen'+n+'-v')?.value||''}</td><td>${document.getElementById('gen'+n+'-a')?.value||''}</td><td>${document.getElementById('gen'+n+'-kwh')?.value||''}</td></tr>`).join('')}
     </table>
 
     <div class="sec">점검결과 — 저압설비</div>
@@ -1245,21 +1340,54 @@ function toggleChk(key,val,btn) {
 // ══════════════════════════════════════════
 //  MEAS ROWS
 // ══════════════════════════════════════════
-function buildMeasRows(meas) {
+function buildMeasRows(meas, meas2) {
+  const inp = (id, val, ph) => `<input id="${id}" type="number" placeholder="${ph}" value="${val||''}" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:var(--radius-sm);color:var(--text);padding:8px;font-size:13px;outline:none;width:100%;">`;
   document.getElementById('meas-rows').innerHTML = ['R','S','T','N'].map(ph=>{
     const pid=ph.toLowerCase();
     return `<div class="meas-row">
       <span class="meas-label">${ph}</span>
-      <input id="m${pid}-v" type="number" placeholder="전압" value="${meas?.[ph]?.v||''}" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:var(--radius-sm);color:var(--text);padding:8px;font-size:13px;outline:none;width:100%;">
-      <input id="m${pid}-a" type="number" placeholder="전류" value="${meas?.[ph]?.a||''}" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:var(--radius-sm);color:var(--text);padding:8px;font-size:13px;outline:none;width:100%;">
+      ${inp('m1'+pid+'-v', meas?.[ph]?.v, '전압')}
+      ${inp('m1'+pid+'-a', meas?.[ph]?.a, '전류')}
     </div>`;
   }).join('');
+  const el2 = document.getElementById('meas-rows2');
+  if (el2) el2.innerHTML = ['R','S','T','N'].map(ph=>{
+    const pid=ph.toLowerCase();
+    return `<div class="meas-row">
+      <span class="meas-label">${ph}</span>
+      ${inp('m2'+pid+'-v', meas2?.[ph]?.v, '전압')}
+      ${inp('m2'+pid+'-a', meas2?.[ph]?.a, '전류')}
+    </div>`;
+  }).join('');
+  // 발전설비 3행
+  const genEl = document.getElementById('gen-rows');
+  if (genEl) genEl.innerHTML = [1,2,3].map(n=>`
+    <div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:6px;margin-bottom:6px;align-items:center;">
+      <input id="gen${n}-kw" type="number" placeholder="KW" style="width:60px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:var(--radius-sm);color:var(--text);padding:8px;font-size:12px;outline:none;">
+      <input id="gen${n}-v"  type="number" placeholder="전압" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:var(--radius-sm);color:var(--text);padding:8px;font-size:13px;outline:none;width:100%;">
+      <input id="gen${n}-a"  type="number" placeholder="전류" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:var(--radius-sm);color:var(--text);padding:8px;font-size:13px;outline:none;width:100%;">
+      <input id="gen${n}-kwh" type="number" placeholder="발전량" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:var(--radius-sm);color:var(--text);padding:8px;font-size:13px;outline:none;width:100%;">
+    </div>`).join('');
 }
 function collectMeas() {
   const g=id=>document.getElementById(id)?.value||'';
-  return { loc:g('m1-loc'), rated:g('m1-rated'),
-    R:{v:g('mr-v'),a:g('mr-a')}, S:{v:g('ms-v'),a:g('ms-a')},
-    T:{v:g('mt-v'),a:g('mt-a')}, N:{v:g('mn-v'),a:g('mn-a')} };
+  return {
+    loc:g('m1-loc'), rated:g('m1-rated'),
+    R:{v:g('m1r-v'),a:g('m1r-a')}, S:{v:g('m1s-v'),a:g('m1s-a')},
+    T:{v:g('m1t-v'),a:g('m1t-a')}, N:{v:g('m1n-v'),a:g('m1n-a')}
+  };
+}
+function collectMeas2() {
+  const g=id=>document.getElementById(id)?.value||'';
+  return {
+    loc:g('m2-loc'), rated:g('m2-rated'),
+    R:{v:g('m2r-v'),a:g('m2r-a')}, S:{v:g('m2s-v'),a:g('m2s-a')},
+    T:{v:g('m2t-v'),a:g('m2t-a')}, N:{v:g('m2n-v'),a:g('m2n-a')}
+  };
+}
+function collectGen() {
+  const g=id=>document.getElementById(id)?.value||'';
+  return [1,2,3].map(n=>({ kw:g('gen'+n+'-kw'), v:g('gen'+n+'-v'), a:g('gen'+n+'-a'), kwh:g('gen'+n+'-kwh') }));
 }
 
 // ══════════════════════════════════════════
