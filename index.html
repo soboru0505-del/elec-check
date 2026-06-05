@@ -127,6 +127,7 @@ html,body{height:100%;font-family:'Malgun Gothic','맑은 고딕',sans-serif;fon
 /* ── Config notice ── */
 .config-notice{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:12px;margin:10px 12px 0;font-size:12px;color:var(--warning);line-height:1.7;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 </head>
 <body>
 <div id="app">
@@ -319,8 +320,8 @@ html,body{height:100%;font-family:'Malgun Gothic','맑은 고딕',sans-serif;fon
           <div class="field"><textarea id="f-mgr-comment" placeholder="확인 의견 (선택사항)..."></textarea></div>
           <div style="margin-top:8px;">
             <div style="font-size:12px;color:var(--text3);margin-bottom:6px;font-weight:600;">✍️ 업무담당자 서명</div>
-            <div id="mgr-sign-area" style="background:#fff;border:2px solid #e2e8f0;border-radius:8px;height:150px;position:relative;cursor:crosshair;margin-bottom:10px;">
-              <canvas id="mgr-cvs"></canvas>
+            <div style="border:2px solid #e2e8f0;border-radius:8px;background:#fff;margin-bottom:8px;position:relative;">
+              <canvas id="mgr-cvs" style="width:100%;height:150px;display:block;border-radius:6px;"></canvas>
               <div id="mgr-sign-ph" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#cbd5e1;font-size:13px;pointer-events:none;">여기에 서명하세요</div>
             </div>
             <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
@@ -336,8 +337,8 @@ html,body{height:100%;font-family:'Malgun Gothic','맑은 고딕',sans-serif;fon
           <div class="field"><textarea id="f-apr-comment" placeholder="최종 결재 의견 (선택사항)..."></textarea></div>
           <div style="margin-top:8px;">
             <div style="font-size:12px;color:var(--text3);margin-bottom:6px;font-weight:600;">✍️ 확인자 서명</div>
-            <div id="apr-sign-area" style="background:#fff;border:2px solid #e2e8f0;border-radius:8px;height:150px;position:relative;cursor:crosshair;margin-bottom:10px;">
-              <canvas id="apr-cvs"></canvas>
+            <div style="border:2px solid #e2e8f0;border-radius:8px;background:#fff;margin-bottom:8px;position:relative;">
+              <canvas id="apr-cvs" style="width:100%;height:150px;display:block;border-radius:6px;"></canvas>
               <div id="apr-sign-ph" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#cbd5e1;font-size:13px;pointer-events:none;">여기에 서명하세요</div>
             </div>
             <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
@@ -351,8 +352,8 @@ html,body{height:100%;font-family:'Malgun Gothic','맑은 고딕',sans-serif;fon
         <div class="card" id="cmp-card" style="border-color:rgba(37,99,235,.3);">
           <div class="card-title" style="color:var(--accent);">✍️ 유지보수용역 서명</div>
           <div style="font-size:12px;color:var(--text3);margin-bottom:8px;">점검 완료 후 서명하고 제출해 주세요.</div>
-          <div id="cmp-sign-area" style="background:#fff;border:2px solid #e2e8f0;border-radius:8px;height:150px;position:relative;cursor:crosshair;margin-bottom:10px;">
-              <canvas id="cmp-cvs"></canvas>
+          <div style="border:2px solid #e2e8f0;border-radius:8px;background:#fff;margin-bottom:8px;position:relative;">
+              <canvas id="cmp-cvs" style="width:100%;height:150px;display:block;border-radius:6px;"></canvas>
               <div id="cmp-sign-ph" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#cbd5e1;font-size:13px;pointer-events:none;">여기에 서명하세요</div>
             </div>
           <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
@@ -653,15 +654,7 @@ function showPage(name) {
   if (tb) tb.classList.add('active');
   if (name === 'home') loadHome();
   if (name === 'list') loadList();
-  if (name === 'form' && !currentEditId) {
-    initNewForm();
-    setTimeout(() => {
-      if (currentUser.role === 'company') {
-        signPads['cmp'] = null;
-        initSignPad('cmp');
-      }
-    }, 500);
-  }
+  if (name === 'form' && !currentEditId) initNewForm();
   if (name === 'settings') initSettingsPage();
 }
 
@@ -790,13 +783,16 @@ function initNewForm() {
   const cmpCard = document.getElementById('cmp-card');
   if (cmpCard) cmpCard.style.display = currentUser.role==='company' ? 'block' : 'none';
   renderFormActions('draft', null);
-  // 페이지 렌더링 완료 후 서명 초기화
-  if (currentUser.role === 'company') {
-    setTimeout(() => {
-      signPads['cmp'] = null;
-      initSignPad('cmp');
-    }, 400);
-  }
+  // 서명 패드 완전 초기화
+  ['cmp','mgr','apr'].forEach(p => {
+    if (signPads[p] && signPads[p].sp) signPads[p].sp.clear();
+    signPads[p] = null;
+  });
+  setTimeout(() => {
+    if (currentUser.role === 'company') initSignPad('cmp');
+    initSignPad('mgr');
+    initSignPad('apr');
+  }, 400);
 }
 
 async function openRecord(id) {
@@ -853,12 +849,27 @@ async function openRecord(id) {
 
   // 서명 캔버스 초기화 및 기존 서명 로드
   if (true) {
+    // 서명 패드 완전 초기화
+    ['cmp','mgr','apr'].forEach(p => {
+      if (signPads[p] && signPads[p].sp) signPads[p].sp.clear();
+      signPads[p] = null;
+    });
     if (canEdit) initSignPad('cmp');
     initSignPad('mgr');
     initSignPad('apr');
-    if (rec.companySign) loadSignFromUrl('cmp', rec.companySign);
-    if (rec.managerSign) loadSignFromUrl('mgr', rec.managerSign);
-    if (rec.approverSign) loadSignFromUrl('apr', rec.approverSign);
+
+    // 역할별로 해당 서명만 로드
+    // - 업체직원: 본인 서명만 (수정 가능)
+    // - 업무담당자: 업체서명 표시(읽기전용) + 본인 서명란 비움
+    // - 확인자: 업체+담당자 서명 표시(읽기전용) + 본인 서명란 비움
+    if (currentUser.role === 'company') {
+      // 업체직원: 자기 서명만 복원
+      if (rec.companySign) loadSignFromUrl('cmp', rec.companySign);
+    } else if (currentUser.role === 'manager') {
+      // 업무담당자: 담당자 서명란은 항상 비움 (새로 서명해야 함)
+    } else if (currentUser.role === 'approver') {
+      // 확인자: 확인자 서명란은 항상 비움 (새로 서명해야 함)
+    }
     // 읽기전용일때 캔버스 비활성화
     // 읽기전용: 서명 wrap 포인터 이벤트 제어
     const cmpWrap = document.getElementById('cmp-sign-wrap');
@@ -910,102 +921,63 @@ function renderFormActions(status, rec) {
 }
 
 // ══════════════════════════════════════════
-//  SIGNATURE PAD (테스트 검증 버전)
+//  SIGNATURE PAD (signature_pad 라이브러리)
 // ══════════════════════════════════════════
 const signPads = {};
 
 function initSignPad(prefix) {
-  const area = document.getElementById(prefix + '-sign-area');
-  const cvs  = document.getElementById(prefix + '-cvs');
-  if (!area || !cvs) return;
-  if (signPads[prefix] && signPads[prefix].ready) return;
+  const cvs = document.getElementById(prefix + '-cvs');
+  if (!cvs) return;
+  if (signPads[prefix] && signPads[prefix].sp) return;
 
-  function resize() {
-    const r = area.getBoundingClientRect();
-    const d = window.devicePixelRatio || 1;
-    // 크기가 0이면 부모 너비로 강제 설정
-    const W = r.width  || area.offsetWidth  || area.parentElement?.offsetWidth  || 300;
-    const H = r.height || area.offsetHeight || 150;
-    cvs.width  = W * d;
-    cvs.height = H * d;
-    cvs.style.position = 'absolute';
-    cvs.style.inset    = '0';
-    cvs.style.width    = '100%';
-    cvs.style.height   = '100%';
-    const ctx = cvs.getContext('2d');
-    ctx.setTransform(1,0,0,1,0,0);
-    ctx.scale(d, d);
-    ctx.strokeStyle = '#111827';
-    ctx.lineWidth   = 2.5;
-    ctx.lineCap     = 'round';
-    ctx.lineJoin    = 'round';
-    return ctx;
+  // canvas 실제 픽셀 크기 설정
+  const dpr = window.devicePixelRatio || 1;
+  const W   = cvs.offsetWidth  || cvs.parentElement?.offsetWidth  || 300;
+  const H   = cvs.offsetHeight || 150;
+  cvs.width  = W * dpr;
+  cvs.height = H * dpr;
+  const ctx = cvs.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  if (!W) { setTimeout(() => initSignPad(prefix), 300); return; }
+
+  try {
+    const sp = new SignaturePad(cvs, {
+      minWidth: 1,
+      maxWidth: 3,
+      penColor: '#111827',
+      backgroundColor: 'rgba(255,255,255,0)',
+    });
+
+    sp.addEventListener('beginStroke', () => {
+      const ph = document.getElementById(prefix + '-sign-ph');
+      if (ph) ph.style.display = 'none';
+      const sv = document.getElementById(prefix + '-sign-saved');
+      if (sv) sv.style.display = 'inline';
+      signPads[prefix].hasDrawn = true;
+    });
+
+    signPads[prefix] = { sp, cvs, hasDrawn: false };
+  } catch(e) {
+    console.error('SignaturePad init error:', e);
   }
-
-  const r = area.getBoundingClientRect();
-  const W = r.width || area.offsetWidth || area.parentElement?.offsetWidth || 0;
-  if (!W) {
-    setTimeout(() => initSignPad(prefix), 300);
-    return;
-  }
-
-  const ctx = resize();
-  let on = false, lx = 0, ly = 0;
-
-  function pos(e) {
-    const rc = cvs.getBoundingClientRect();
-    const s  = e.touches ? e.touches[0] : e;
-    return { x: s.clientX - rc.left, y: s.clientY - rc.top };
-  }
-  function down(e) {
-    e.preventDefault();
-    on = true;
-    const p = pos(e); lx = p.x; ly = p.y;
-    ctx.beginPath(); ctx.arc(p.x, p.y, 1, 0, Math.PI*2);
-    ctx.fillStyle = '#111827'; ctx.fill();
-    const ph = document.getElementById(prefix+'-sign-ph');
-    if (ph) ph.style.display = 'none';
-    signPads[prefix].hasDrawn = true;
-    const sv = document.getElementById(prefix+'-sign-saved');
-    if (sv) sv.style.display = 'inline';
-  }
-  function move(e) {
-    e.preventDefault();
-    if (!on) return;
-    const p = pos(e);
-    ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(p.x, p.y); ctx.stroke();
-    lx = p.x; ly = p.y;
-  }
-  function up() { on = false; }
-
-  cvs.addEventListener('mousedown',  down, false);
-  cvs.addEventListener('mousemove',  move, false);
-  cvs.addEventListener('mouseup',    up,   false);
-  cvs.addEventListener('mouseleave', up,   false);
-  cvs.addEventListener('touchstart', down, { passive: false });
-  cvs.addEventListener('touchmove',  move, { passive: false });
-  cvs.addEventListener('touchend',   up,   false);
-
-  signPads[prefix] = { cvs, ctx, hasDrawn: false, ready: true };
 }
 function clearSign(prefix) {
   const pad = signPads[prefix];
-  if (pad && pad.cvs) {
-    const d = window.devicePixelRatio || 1;
-    const r = pad.cvs.getBoundingClientRect();
-    pad.ctx.clearRect(0, 0, pad.cvs.width/d, pad.cvs.height/d);
+  if (pad && pad.sp) {
+    pad.sp.clear();
     pad.hasDrawn = false;
   }
-  const ph = document.getElementById(prefix+'-sign-ph');
+  const ph = document.getElementById(prefix + '-sign-ph');
   if (ph) ph.style.display = 'flex';
-  const sv = document.getElementById(prefix+'-sign-saved');
+  const sv = document.getElementById(prefix + '-sign-saved');
   if (sv) sv.style.display = 'none';
 }
 
 function getSignDataUrl(prefix) {
   const pad = signPads[prefix];
-  if (!pad || !pad.hasDrawn || !pad.cvs) return '';
-  try { return pad.cvs.toDataURL('image/png'); } catch(e) { return ''; }
+  if (!pad || !pad.hasDrawn || !pad.sp || pad.sp.isEmpty()) return '';
+  try { return pad.sp.toDataURL('image/png'); } catch(e) { return ''; }
 }
 
 function getSignDataUrlAsync(prefix) {
@@ -1016,19 +988,14 @@ function loadSignFromUrl(prefix, dataUrl) {
   if (!dataUrl) return;
   function tryLoad() {
     const pad = signPads[prefix];
-    if (!pad || !pad.cvs) { setTimeout(tryLoad, 300); return; }
-    const img = new Image();
-    img.onload = () => {
-      const d = window.devicePixelRatio || 1;
-      pad.ctx.clearRect(0, 0, pad.cvs.width/d, pad.cvs.height/d);
-      pad.ctx.drawImage(img, 0, 0, pad.cvs.width/d, pad.cvs.height/d);
+    if (!pad || !pad.sp) { setTimeout(tryLoad, 300); return; }
+    pad.sp.fromDataURL(dataUrl).then(() => {
       pad.hasDrawn = true;
-      const ph = document.getElementById(prefix+'-sign-ph');
+      const ph = document.getElementById(prefix + '-sign-ph');
       if (ph) ph.style.display = 'none';
-      const sv = document.getElementById(prefix+'-sign-saved');
+      const sv = document.getElementById(prefix + '-sign-saved');
       if (sv) sv.style.display = 'inline';
-    };
-    img.src = dataUrl;
+    });
   }
   tryLoad();
 }
@@ -1068,9 +1035,9 @@ async function handleSave(newStatus) {
     meas1: collectMeas(),
     managerComment: document.getElementById('f-mgr-comment').value || existing?.managerComment || '',
     approverComment: document.getElementById('f-apr-comment').value || existing?.approverComment || '',
-    companySign: (await getSignDataUrlAsync('cmp')) || existing?.companySign || '',
-    managerSign: (newStatus==='reviewed' ? (await getSignDataUrlAsync('mgr')) : '') || existing?.managerSign || '',
-    approverSign: (newStatus==='approved' ? (await getSignDataUrlAsync('apr')) : '') || existing?.approverSign || '',
+    companySign: (newStatus==='submitted' || newStatus==='draft') ? ((await getSignDataUrlAsync('cmp')) || existing?.companySign || '') : (existing?.companySign || ''),
+    managerSign: newStatus==='reviewed' ? (await getSignDataUrlAsync('mgr')) : (existing?.managerSign || ''),
+    approverSign: newStatus==='approved' ? (await getSignDataUrlAsync('apr')) : (existing?.approverSign || ''),
     status: newStatus,
     submittedAt: newStatus==='submitted' ? new Date().toISOString() : existing?.submittedAt||'',
     reviewedAt:  newStatus==='reviewed'  ? new Date().toISOString() : existing?.reviewedAt||'',
@@ -1099,13 +1066,6 @@ function newRecord() {
   currentEditId = null;
   initNewForm();
   showPage('form');
-  // form 탭으로 전환 후 cmp 서명 재초기화
-  setTimeout(() => {
-    if (currentUser.role === 'company') {
-      signPads['cmp'] = null;
-      initSignPad('cmp');
-    }
-  }, 500);
 }
 
 // ══════════════════════════════════════════
@@ -1170,6 +1130,7 @@ td{padding:2px 4px;border:1px solid #ccc;font-size:8.5px;}
   html,body{height:auto;}
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
 </head><body>
 <button class="print-btn" onclick="window.print()">🖨️ 인쇄</button>
 <div class="wrap">
