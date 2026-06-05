@@ -1,0 +1,4 @@
+plugins: []
+markdown: kramdown
+highlighter: none
+safe: true
