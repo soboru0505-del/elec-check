@@ -142,13 +142,13 @@ html,body{height:100%;font-family:'Malgun Gothic','맑은 고딕',sans-serif;fon
       <div class="field">
         <label>접속 구분 선택</label>
         <div class="role-btns">
-          <button class="role-btn" id="rb-company" onclick="selectRole('company')">
+          <button class="role-btn" id="rb-company">
             <span style="font-size:22px;">✏️</span>유지보수용역
           </button>
-          <button class="role-btn" id="rb-manager" onclick="selectRole('manager')">
+          <button class="role-btn" id="rb-manager">
             <span style="font-size:22px;">🔍</span>업무담당자
           </button>
-          <button class="role-btn" id="rb-approver" onclick="selectRole('approver')">
+          <button class="role-btn" id="rb-approver">
             <span style="font-size:22px;">✅</span>확인자
           </button>
         </div>
@@ -160,7 +160,7 @@ html,body{height:100%;font-family:'Malgun Gothic','맑은 고딕',sans-serif;fon
         <input id="login-pw" type="password" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doLogin()">
       </div>
       <div id="login-err" style="color:var(--danger);font-size:12px;margin-bottom:10px;display:none;">⚠ 아이디 또는 비밀번호가 올바르지 않습니다.</div>
-      <button class="btn btn-primary" onclick="doLogin()" style="margin-bottom:16px;">로그인</button>
+      <button class="btn btn-primary" id="login-btn" style="margin-bottom:16px;">로그인</button>
 
       <div style="padding:12px;background:var(--bg);border-radius:10px;font-size:12px;color:var(--text3);line-height:2;">
         <div style="font-weight:700;color:var(--text2);margin-bottom:2px;">공통 계정</div>
@@ -178,7 +178,7 @@ html,body{height:100%;font-family:'Malgun Gothic','맑은 고딕',sans-serif;fon
         <div class="header-title">⚡ 전기설비 점검 시스템</div>
         <div class="header-sub" id="header-user"></div>
       </div>
-      <button style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;" onclick="doLogout()">로그아웃</button>
+      <button id="logout-btn" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">로그아웃</button>
     </div>
 
     <div class="nav no-print">
@@ -1345,6 +1345,19 @@ function initSettingsPage() {
 }
 
 // Init
+// 역할 버튼 이벤트
+document.getElementById('rb-company').addEventListener('click', function() { selectRole('company'); });
+document.getElementById('rb-manager').addEventListener('click', function() { selectRole('manager'); });
+document.getElementById('rb-approver').addEventListener('click', function() { selectRole('approver'); });
+
+// 로그인 버튼
+document.getElementById('login-btn').addEventListener('click', doLogin);
+document.getElementById('login-id').addEventListener('keydown', function(e) { if(e.key==='Enter') doLogin(); });
+document.getElementById('login-pw').addEventListener('keydown', function(e) { if(e.key==='Enter') doLogin(); });
+
+// 로그아웃 버튼
+document.getElementById('logout-btn').addEventListener('click', doLogout);
+
 selectRole('company');
 </script>
 </body>
